@@ -121,6 +121,8 @@ export interface TaskInfo {
   cwd: string;
   createdAt: number;
   title?: string;
+  sessionId?: string;
+  lastModified?: number;
 }
 
 /**

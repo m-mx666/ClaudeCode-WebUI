@@ -49,6 +49,28 @@ export function createApi(manager: LiveManager, version: string): Hono {
     const limit = Number(c.req.query('limit') ?? 1000);
     const offset = Number(c.req.query('offset') ?? 0);
     const sessions = await listSessions({ dir, limit, offset, includeProgrammatic: true });
+
+    // 全局扫描时，补充对所有任务沙箱目录的显式扫描，防止 SDK 全局扫描时漏掉首问为图片/富文本的任务会话
+    if (!dir) {
+      try {
+        const tasks = await listTasks();
+        const taskSessions = (
+          await Promise.all(
+            tasks.map((t) => listSessions({ dir: t.cwd, includeProgrammatic: true }).catch(() => []))
+          )
+        ).flat();
+
+        const knownIds = new Set(sessions.map((s) => s.sessionId));
+        for (const ts of taskSessions) {
+          if (!knownIds.has(ts.sessionId) && ts.cwd) {
+            sessions.push(ts);
+          }
+        }
+      } catch {
+        // ignore
+      }
+    }
+
     return c.json(sessions.filter((s) => s.cwd));
   });
 

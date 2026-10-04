@@ -571,9 +571,9 @@ export function useTaskItems(): TaskRowItem[] {
       const liveList = liveByCwd.get(k) ?? [];
       const activeLive = liveList[0];
 
-      let sessionId: string | null = null;
+      let sessionId: string | null = t.sessionId ?? null;
       let title = t.title || t.taskId;
-      let time: number | undefined = t.createdAt;
+      let time: number | undefined = t.lastModified ?? t.createdAt;
 
       if (latestSession) {
         sessionId = latestSession.sessionId;
@@ -581,7 +581,7 @@ export function useTaskItems(): TaskRowItem[] {
         time = latestSession.lastModified;
       } else if (activeLive) {
         sessionId = activeLive.sessionId;
-        title = '新任务';
+        if (!title || title.startsWith('task-')) title = '新任务';
       } else if (view && samePath(view.cwd, t.cwd) && view.sessionId) {
         sessionId = view.sessionId;
       }

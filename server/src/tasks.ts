@@ -54,17 +54,28 @@ export async function listTasks(): Promise<TaskInfo[]> {
 
   for (const name of dirs) {
     existingSet.add(name);
-    const existing = recordedMap.get(name);
-    if (existing) {
-      result.push(existing);
-    } else {
-      result.push({
-        taskId: name,
-        cwd: join(root, name),
-        createdAt: Date.now(),
-        title: name,
-      });
+    const taskCwd = join(root, name);
+    const existing = recordedMap.get(name) ?? {
+      taskId: name,
+      cwd: taskCwd,
+      createdAt: Date.now(),
+      title: name,
+    };
+
+    // 显式查询该沙箱目录下的最新会话，确保首问为图片/富文本的会话也能提取出真实标题与 sessionId
+    try {
+      const sessions = await listSessions({ dir: taskCwd, limit: 1, includeProgrammatic: true });
+      const latest = sessions[0];
+      if (latest) {
+        existing.sessionId = latest.sessionId;
+        existing.title = latest.customTitle || latest.summary || latest.firstPrompt || existing.title;
+        existing.lastModified = latest.lastModified;
+      }
+    } catch {
+      // ignore
     }
+
+    result.push(existing);
   }
 
   // Filter out records whose folders no longer exist on disk
